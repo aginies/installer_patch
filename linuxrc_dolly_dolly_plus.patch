@@ -1,0 +1,466 @@
+diff -rau linuxrc-4.1.5/auto2.c linuxrc-4.1.5.patched/auto2.c
+--- linuxrc-4.1.5/auto2.c	2013-04-10 19:31:15.447409095 +0200
++++ linuxrc-4.1.5.patched/auto2.c	2013-04-11 13:37:56.135599205 +0200
+@@ -614,7 +614,7 @@
+   }
+ 
+   if(config.net.configured == nc_none) {
+-    config.vnc = config.usessh = config.dolly = 0;
++    config.vnc = config.usessh = config.dolly = config.dollyplus = 0;
+   }
+   else {
+     net_is_ptp_im = FALSE;
+Only in linuxrc-4.1.5.patched: auto2.o
+Only in linuxrc-4.1.5.patched: checkmedia.o
+Only in linuxrc-4.1.5.patched: .depend
+diff -rau linuxrc-4.1.5/dialog.c linuxrc-4.1.5.patched/dialog.c
+--- linuxrc-4.1.5/dialog.c	2013-04-10 17:48:31.514296585 +0200
++++ linuxrc-4.1.5.patched/dialog.c	2013-04-11 13:55:48.605618781 +0200
+@@ -65,6 +65,7 @@
+   { di_inst_update_add,  TXT_ADD_DRIVER_UPDATE,   },
+   { di_inst_update_show, TXT_SHOW_DRIVER_UPDATES, },
+   { di_inst_dolly, 	 TXT_START_DOLLY,         },
++  { di_inst_dollyplus,  TXT_START_DOLLYPLUS,    },
+ 
+   { di_source_cdrom,     TXT_DVD,                 },
+   { di_source_net,       TXT_NET,                 },
+diff -rau linuxrc-4.1.5/dialog.h linuxrc-4.1.5.patched/dialog.h
+--- linuxrc-4.1.5/dialog.h	2013-04-10 17:48:23.232296433 +0200
++++ linuxrc-4.1.5.patched/dialog.h	2013-04-11 13:55:53.315618867 +0200
+@@ -49,6 +49,7 @@
+   di_inst_system,
+   di_inst_rescue,
+   di_inst_dolly,
++  di_inst_dollyplus,
+   di_inst_update_add,
+   di_inst_update_show,
+ 
+Only in linuxrc-4.1.5.patched: dialog.o
+Only in linuxrc-4.1.5.patched: display.o
+Only in linuxrc-4.1.5: dolly.c
+Only in linuxrc-4.1.5: dolly.h
+diff -rau linuxrc-4.1.5/file.c linuxrc-4.1.5.patched/file.c
+--- linuxrc-4.1.5/file.c	2013-04-10 19:56:26.046436668 +0200
++++ linuxrc-4.1.5.patched/file.c	2013-04-11 13:39:49.182601268 +0200
+@@ -164,7 +164,9 @@
+   { key_vnc,            "UseVNC",         kf_cfg + kf_cmd                },
+   { key_usessh,         "UseSSH",         kf_cfg + kf_cmd                },
+   { key_usessh,         "SSH",            kf_cfg + kf_cmd                },
++  { key_dollyplus,     "DollyPlus",      kf_cfg + kf_cmd                },
+   { key_dolly,          "Dolly",          kf_cfg + kf_cmd                },
++  { key_dollytimeout,   "DollyTimeout",   kf_cfg + kf_cmd                },
+   { key_vncpassword,    "VNCPassword",    kf_cfg + kf_cmd                },
+   { key_displayip,	"Display_IP",     kf_cfg + kf_cmd		 },
+   { key_sshpassword,    "SSHPassword",    kf_cfg + kf_cmd                },
+@@ -856,6 +858,13 @@
+       }
+       break;
+ 
++    case key_dollyplus:
++      if(f->is.numeric) config.dollyplus = f->nvalue;
++      if(config.dollyplus) {
++	config.net.do_setup |= DS_DOLLY_PLUS;
++      }
++      break;
++
+       case key_vncpassword:
+         str_copy(&config.net.vncpassword, *f->value ? f->value : NULL);
+ 	/* do not enable vnc nor network ... this is done with vnc=1 */
+@@ -1927,6 +1936,7 @@
+   file_write_inet2(f, key_ptphost, &config.net.ptphost, INET_WRITE_IP);
+   file_write_num(f, key_usessh, config.usessh);
+   file_write_num(f, key_dolly, config.dolly);
++  file_write_num(f, key_dollyplus, config.dollyplus);
+   if(yast2_color_ig) fprintf(f, "%s: %06x\n", file_key2str(key_yast2color), yast2_color_ig);
+   if(config.noshell) file_write_num(f, key_noshell, config.noshell);
+   file_write_str(f, key_initrd_id, config.initrd_id);
+diff -rau linuxrc-4.1.5/file.h linuxrc-4.1.5.patched/file.h
+--- linuxrc-4.1.5/file.h	2013-04-10 10:54:55.655103452 +0200
++++ linuxrc-4.1.5.patched/file.h	2013-04-11 13:38:19.571599633 +0200
+@@ -26,7 +26,7 @@
+   key_rescueimage, key_nopcmcia, key_vnc, key_vncpassword, key_displayip,
+   key_sshpassword, key_term, key_addswap, key_aborted, key_netstop,
+   key_exec, key_usbwait, key_nfsrsize, key_nfswsize, key_setupcmd,
+-  key_setupnetif, key_netconfig, key_usessh, key_dolly, key_noshell, key_hwdetect,
++  key_setupnetif, key_netconfig, key_usessh, key_dollyplus, key_dolly, key_dollytimeout, key_noshell, key_hwdetect,
+   key_consoledevice, key_product, key_productdir,
+   key_linuxrcstderr, key_comment, key_kbdtimeout, key_brokenmodules,
+   key_scsibeforeusb, key_hostip, key_linemode, key_moduledelay,
+Only in linuxrc-4.1.5.patched: file.o
+Only in linuxrc-4.1.5.patched: fstype.o
+diff -rau linuxrc-4.1.5/global.h linuxrc-4.1.5.patched/global.h
+--- linuxrc-4.1.5/global.h	2013-04-10 19:13:53.339390073 +0200
++++ linuxrc-4.1.5.patched/global.h	2013-04-11 13:40:17.486601785 +0200
+@@ -256,6 +256,7 @@
+ #define DS_VNC			(1 << 2)
+ #define DS_SSH			(1 << 3)
+ #define DS_DOLLY		(1 << 4)
++#define DS_DOLLY_PLUS		(1 << 5)
+ 
+ /* config.net.setup bitmasks */
+ 
+@@ -295,7 +296,9 @@
+   unsigned tmpfs:1;		/* we're using tmpfs for / */
+   unsigned run_as_linuxrc:1;	/* set if we really are linuxrc */
+   unsigned test:1;		/* we are in test mode */
++  unsigned dollyplus:1;		/* we are in dolly mode */
+   unsigned dolly:1;		/* we are in dolly mode */
++  unsigned dollytimeout:1;	/* dollytime out */
+   unsigned rescue:1;		/* start rescue system */
+   unsigned shell_started:1;	/* there is a shell running on /dev/tty9 */
+   unsigned extramount:1;	/* mountpoints.extra is in use */
+Only in linuxrc-4.1.5.patched: global.o
+Only in linuxrc-4.1.5.patched: info.o
+diff -rau linuxrc-4.1.5/install.c linuxrc-4.1.5.patched/install.c
+--- linuxrc-4.1.5/install.c	2013-04-11 08:55:18.911289684 +0200
++++ linuxrc-4.1.5.patched/install.c	2013-04-11 15:47:53.486741530 +0200
+@@ -80,7 +80,7 @@
+ 
+ 
+ /*
+- * Menu: install, system start, rescue, dolly
++ * Menu: install, system start, rescue, dolly, dolly_plus
+  *
+  * return values:
+  *   0 : ok
+@@ -94,6 +94,7 @@
+     di_inst_system,
+     di_inst_rescue,
+     di_inst_dolly,
++    di_inst_dollyplus,
+     di_none
+   };
+ 
+@@ -140,6 +141,11 @@
+       err = dolly_start();
+       break;
+ 
++    case di_inst_dollyplus:
++      config.dollyplus = 1;
++      err = dolly_plus_start();
++      break;
++
+     default:
+       break;
+   }
+@@ -256,7 +262,7 @@
+ #if defined(__s390__) || defined(__s390x__)  
+ int inst_choose_display()
+ {
+-  if(!config.manual && (config.net.displayip.ok || config.vnc || config.usessh || config.dolly)) {
++  if(!config.manual && (config.net.displayip.ok || config.vnc || config.usessh || config.dolly || config.dollyplus)) {
+     net_ask_password();
+     return 0;
+   }
+@@ -267,6 +273,7 @@
+       di_display_vnc,
+       di_display_ssh,
+       di_display_dolly,
++      di_display_dollyplus,
+       di_display_console,
+       di_none
+     };
+@@ -307,6 +314,10 @@
+       config.dolly=1;
+       break;
+ 
++    case di_display_dollyplus:
++      config.dollyplus=1;
++      break;
++
+     case di_display_console:
+       /* nothing to do */
+       break;
+@@ -943,6 +954,93 @@
+   return err;
+ }
+ 
++/*
++ * Start Dolly
++ *
++ * return:
++ *   0: ok
++ *   1: err
++ */
++int dolly_start() {
++  int count;
++  char * dolly_to = NULL;
++  for (count = 1; count <= DOLLY_MAX_RETRY ; count++)
++  {
++  // retieve the timeout from config
++  if(config.dollytimeout) {
++       *dolly_to = config.dollytimeout;
++  } else {
++       dolly_to=strdup("60");
++  }
++  char * dolly_launch[] = { "/usr/bin/dolly", "-a", dolly_to, NULL };
++
++  fprintf(stderr, "Waiting for Dolly server (timeout %s seconds) (Try %d/%d)\n", dolly_to, count, DOLLY_MAX_RETRY);
++  printf("Waiting for Dolly server (timeout %s seconds) (Try %d/%d)\n", dolly_to, count, DOLLY_MAX_RETRY);
++
++  pid_t pid; pid_t wpid; int status;
++  pid = fork();
++  if ( pid == -1 ) {
++    fprintf(stderr, "%s: Failed to fork()\n", strerror(errno));
++    exit(13);
++  } else if ( pid == 0 ) {
++//    close(1);
++//    close(2);
++    execv(dolly_launch[0], dolly_launch);
++  } else {
++    wpid = wait(&status);   /* Child's exit status */
++    if ( wpid == -1 ) {
++      fprintf(stderr, "Dolly: ERROR %s: wait()\n", strerror(errno));
++    } else if ( wpid != pid )
++      abort();
++    else {
++      if ( WIFEXITED(status) ) {
++        fprintf(stderr, "Dolly: Exited: $? = %d\n", WEXITSTATUS(status));
++      } else if ( WIFSIGNALED(status) ) {
++        fprintf(stderr, "Dolly: Signal: %d%s\n", WTERMSIG(status), WCOREDUMP(status) ? " with core file." : "");
++      }
++    }
++  }
++  }
++  return 1;
++}
++
++
++/*
++ * Start Dolly_plus
++ *
++ * return:
++ *   0: ok
++ *   1: err
++ */
++int dolly_plus_start() {
++  char * dolly_plus_launch[] = { "/usr/bin/dollyC", "-v", NULL };
++  fprintf(stderr, "Waiting for DollyS server\n");
++  printf("Waiting for DollyS server\n");
++  pid_t pid; pid_t wpid; int status;
++  pid = fork();
++  if ( pid == -1 ) {
++    fprintf(stderr, "%s: Failed to fork()\n", strerror(errno));
++    exit(13);
++  } else if ( pid == 0 ) {
++//    close(1);
++//    close(2);
++    execv(dolly_plus_launch[0], dolly_plus_launch);
++  } else {
++    wpid = wait(&status);   /* Child's exit status */
++    if ( wpid == -1 ) {
++      fprintf(stderr, "DollyC: ERROR %s: wait()\n", strerror(errno));
++    } else if ( wpid != pid )
++      abort();
++    else {
++      if ( WIFEXITED(status) ) {
++        fprintf(stderr, "DollyC: Exited: $? = %d\n", WEXITSTATUS(status));
++      } else if ( WIFSIGNALED(status) ) {
++        fprintf(stderr, "DollyC: Signal: %d%s\n", WTERMSIG(status), WCOREDUMP(status) ? " with core file." : "");
++      }
++    }
++  }
++  return 0;
++}
+ 
+ /*
+  * Start YaST.
+diff -rau linuxrc-4.1.5/install.h linuxrc-4.1.5.patched/install.h
+--- linuxrc-4.1.5/install.h	2013-02-25 15:13:08.000000000 +0100
++++ linuxrc-4.1.5.patched/install.h	2013-04-11 13:49:33.225611929 +0200
+@@ -6,7 +6,11 @@
+  *
+  */
+ 
++#define DOLLY_MAX_RETRY		3
++
+ int inst_menu(void);
+ int inst_start_install(void);
++int dolly_start(void);
++int dolly_plus_start(void);
+ int inst_choose_partition(char **partition, int swap, char *txt_menu, char *txt_input);
+ int inst_update_cd(void);
+Only in linuxrc-4.1.5.patched: install.o
+Only in linuxrc-4.1.5.patched: keyboard.o
+Only in linuxrc-4.1.5.patched: linuxrc
+diff -rau linuxrc-4.1.5/linuxrc.c linuxrc-4.1.5.patched/linuxrc.c
+--- linuxrc-4.1.5/linuxrc.c	2013-02-25 15:45:59.000000000 +0100
++++ linuxrc-4.1.5.patched/linuxrc.c	2013-04-11 15:48:36.206742310 +0200
+@@ -282,6 +282,7 @@
+ 
+   umount(mp);
+ 
++
+   if(
+     config.rescue &&
+     config.url.instsys &&
+@@ -665,6 +666,7 @@
+   lxrc_catch_signal(0);
+   signal(SIGUSR1, lxrc_usr1);
+ 
++
+ /*  reboot (RB_DISABLE_CAD); */
+ 
+   umask(022);
+@@ -1068,7 +1070,7 @@
+     if(!i) {
+       config.rescue = 0;
+       config.manual |= 1;
+-      if(j) {
++      if(j && config.dolly != 1 &&config.dollyplus !=1 ) {
+         sprintf(buf, "Could not find the %s ", config.product);
+         strcat(buf, "Repository.");
+         strcat(buf, "\n\nActivating manual setup program.\n");
+@@ -1123,6 +1125,14 @@
+     config.rebootmsg = 1;
+   }
+ #endif
++  if(config.dolly) {
++    fprintf(stderr, "Starting Dolly\n");
++    dolly_start();
++  }
++  if(config.dollyplus) {
++    fprintf(stderr, "Starting DollyPlus\n");
++    dolly_plus_start();
++  }
+ }
+ 
+ void lxrc_main_menu()
+diff -rau linuxrc-4.1.5/linuxrc.html linuxrc-4.1.5.patched/linuxrc.html
+--- linuxrc-4.1.5/linuxrc.html	2013-04-10 11:23:22.221134602 +0200
++++ linuxrc-4.1.5.patched/linuxrc.html	2013-04-11 14:47:28.673675366 +0200
+@@ -1202,6 +1202,21 @@
+ </td></tr>
+ 
+ <tr>
++<td> DollyPlus </td><td>
++<p><span id="p_dollyplus" />
++</p><p>This parameter start DollyPlus client to be able to be a Dolly client in a clone process.
++</p>
++<pre> Values: 0 (off), 1 (on)
++</pre>
++<p>Example:
++</p>
++<pre> # use dollyplus
++ dollyplus=1
++</pre>
++</td></tr>
++
++
++<tr>
+ <td> SSHPassword </td><td>
+ <p>This sets the password for the user root for logging into the SSH server during installation if <i>UseSSH</i> is set. This is not the password of the system to be installed. See <i>RootPassword</i>.
+ </p><p>Example:
+Only in linuxrc-4.1.5.patched: linuxrc.o
+Only in linuxrc-4.1.5.patched: md5.o
+Only in linuxrc-4.1.5.patched/mkpsfu: mkpsfu
+Only in linuxrc-4.1.5.patched: module.o
+Only in linuxrc-4.1.5.patched: net.o
+Only in linuxrc-4.1.5.patched/po: af.h
+Only in linuxrc-4.1.5.patched/po: bg.h
+Only in linuxrc-4.1.5.patched/po: ca.h
+Only in linuxrc-4.1.5.patched/po: cs.h
+Only in linuxrc-4.1.5.patched/po: da.h
+Only in linuxrc-4.1.5.patched/po: de.h
+Only in linuxrc-4.1.5.patched/po: el.h
+Only in linuxrc-4.1.5.patched/po: en.h
+Only in linuxrc-4.1.5.patched/po: es.h
+Only in linuxrc-4.1.5.patched/po: fi.h
+Only in linuxrc-4.1.5.patched/po: fr.h
+diff -rau linuxrc-4.1.5/po/fr.po linuxrc-4.1.5.patched/po/fr.po
+--- linuxrc-4.1.5/po/fr.po	2013-04-10 17:38:56.622286091 +0200
++++ linuxrc-4.1.5.patched/po/fr.po	2013-04-11 13:56:15.157619265 +0200
+@@ -15,6 +15,10 @@
+ msgid "Start Dolly"
+ msgstr ""
+ 
++#. TXT_START_DOLLYPLUS
++msgid "Start DollyPlus"
++msgstr ""
++
+ #. TXT_OK
+ msgid "OK"
+ msgstr ""
+Only in linuxrc-4.1.5.patched/po: hu.h
+Only in linuxrc-4.1.5.patched/po: it.h
+Only in linuxrc-4.1.5.patched/po: ja.h
+diff -rau linuxrc-4.1.5/po/linuxrc.pot linuxrc-4.1.5.patched/po/linuxrc.pot
+--- linuxrc-4.1.5/po/linuxrc.pot	2013-04-10 17:38:47.806285930 +0200
++++ linuxrc-4.1.5.patched/po/linuxrc.pot	2013-04-11 13:56:00.597619000 +0200
+@@ -15,6 +15,9 @@
+ msgid "Start Dolly"
+ msgstr ""
+ 
++#. TXT_START_DOLLYPLUS
++msgid "Start DollyPlus"
++msgstr ""
+ 
+ #. TXT_OK
+ msgid "OK"
+Only in linuxrc-4.1.5.patched/po: nb.h
+Only in linuxrc-4.1.5.patched/po: nl.h
+Only in linuxrc-4.1.5.patched/po: pl.h
+Only in linuxrc-4.1.5.patched/po: pt_BR.h
+Only in linuxrc-4.1.5.patched/po: pt.h
+Only in linuxrc-4.1.5.patched/po: ru.h
+Only in linuxrc-4.1.5.patched/po: sk.h
+Only in linuxrc-4.1.5.patched/po: sl.h
+Only in linuxrc-4.1.5.patched/po: sv.h
+Only in linuxrc-4.1.5.patched/po: text_array.h
+Only in linuxrc-4.1.5.patched/po: text_inc.h
+Only in linuxrc-4.1.5.patched/po: text_langids.h
+Only in linuxrc-4.1.5.patched/po: text_textids.h
+Only in linuxrc-4.1.5.patched/po: uk.h
+Only in linuxrc-4.1.5.patched/po: xh.h
+Only in linuxrc-4.1.5.patched/po: zh_CN.h
+Only in linuxrc-4.1.5.patched/po: zh_TW.h
+Only in linuxrc-4.1.5.patched/po: zu.h
+Only in linuxrc-4.1.5.patched: rootimage.o
+Only in linuxrc-4.1.5.patched: scsi_rename.o
+diff -rau linuxrc-4.1.5/settings.c linuxrc-4.1.5.patched/settings.c
+--- linuxrc-4.1.5/settings.c	2013-04-10 19:33:07.268411136 +0200
++++ linuxrc-4.1.5.patched/settings.c	2013-04-11 11:36:33.916466282 +0200
+@@ -25,7 +25,6 @@
+ #include "file.h"
+ #include "slp.h"
+ #include "url.h"
+-#include "dolly.h"
+ #include <errno.h>
+ #include <sys/wait.h>
+ 
+Only in linuxrc-4.1.5.patched: settings.o
+Only in linuxrc-4.1.5.patched: sha1.o
+Only in linuxrc-4.1.5.patched: sha256.o
+Only in linuxrc-4.1.5.patched: sha512.o
+Only in linuxrc-4.1.5.patched: slp.o
+Only in linuxrc-4.1.5.patched: text.o
+Only in linuxrc-4.1.5.patched: url.o
+Only in linuxrc-4.1.5.patched: utf8.o
+diff -rau linuxrc-4.1.5/util.c linuxrc-4.1.5.patched/util.c
+--- linuxrc-4.1.5/util.c	2013-04-10 19:28:36.702406197 +0200
++++ linuxrc-4.1.5.patched/util.c	2013-04-11 13:34:31.196595464 +0200
+@@ -1162,7 +1162,9 @@
+   add_flag(&sl0, buf, config.rescue, "rescue");
+   add_flag(&sl0, buf, config.vnc, "vnc");
+   add_flag(&sl0, buf, config.usessh, "usessh");
++  add_flag(&sl0, buf, config.dollyplus, "dollyplus");
+   add_flag(&sl0, buf, config.dolly, "dolly");
++  add_flag(&sl0, buf, config.dollytimeout, "dollytimeout");
+   add_flag(&sl0, buf, config.textmode, "textmode");
+   add_flag(&sl0, buf, config.rebootmsg, "rebootmsg");
+   add_flag(&sl0, buf, config.nopcmcia, "nopcmcia");
+@@ -1276,6 +1278,11 @@
+     slist_append_str(&sl0, buf);
+   }
+ 
++  if(config.dollytimeout) {
++    sprintf(buf, "dollytimeout = %d", config.dollytimeout);
++    slist_append_str(&sl0, buf);
++  }
++
+   if(config.net.wlan.auth) {
+     static char *wlan_a[] = { "", "open", "wep open", "wep restricted", "wpa" };
+     sprintf(buf, "wlan auth = %d (%s)",
+Only in linuxrc-4.1.5.patched: util.o
+Only in linuxrc-4.1.5.patched: version.h
+Only in linuxrc-4.1.5.patched: window.o
